@@ -1,0 +1,62 @@
+version: "3"
+services:
+
+  webserver:
+    image: nginx
+    volumes:
+      - ./default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      plone:
+        ipv4_address: 10.0.201.9
+    ports:
+      - "80:80"
+
+  frontend:
+    image: plone/plone-frontend:latest
+    environment:
+      RAZZLE_INTERNAL_API_PATH: http://backend:8080/Plone
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      plone:
+        ipv4_address: 10.0.201.2
+
+  backend:
+    image: plone/plone-backend:6.0
+    environment:
+      SITE: Plone
+      RELSTORAGE_DSN: "dbname='plone' user='plone' host='10.0.201.6' password='plone'"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db-plone
+    networks:
+      plone:
+        ipv4_address: 10.0.201.100
+
+  db-plone:
+    image: postgres
+    environment:
+      POSTGRES_USER: plone
+      POSTGRES_PASSWORD: plone
+      POSTGRES_DB: plone
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      plone:
+        ipv4_address: 10.0.201.6
+
+networks:
+  plone:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.0.201.0/24
